@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <omp.h>
+#include "mpi.h"
 #include <stdio.h>
 #include <math.h>
 #include <cv.h>
@@ -9,16 +10,22 @@
 #define GREEN 1
 #define RED 2
 
-void applySmooth(IplImage*, IplImage*);
+void applySmooth(IplImage*, IplImage*, int start, int end);
 int calculatePixel(uchar*, int, int , int , int , int , int , int );
 
 int main(int argc, char *argv[])
 {
+    int numtasks, rank, rc, dest, source, count, tag=1;
+    int number_of_processes;
+    char inmsg[10], outmsg[10]; 
+
     // original image
     IplImage* img = 0;
 
     // result image
     IplImage* img_result = 0;
+
+    uchar *img_local_data = 0;
 
 
     if(argc<2){
@@ -32,19 +39,55 @@ int main(int argc, char *argv[])
         printf("Could not load image file: %s\n",argv[1]);
         exit(0);
     }
-
-
+    // Copy the image to apply the smooth algorithm 
     img_result = cvCloneImage(img);
 
-    applySmooth(img, img_result); 
+    printf("height: %d width: %d\n", img->height, img->width);
+    // Initialize MPI and get important variable.
+    MPI_Status Stat;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &number_of_processes);
 
-    cvSaveImage("result/result.jpg", img_result, 0);
+
+    int imageSize = img_result->height*img_result->width*img_result->nChannels;
+    char *result = (char*)malloc(sizeof(char)*imageSize);
+
+
+   // MPI_Scatter(img_result->imageData, sizeof(img_result->imageData), MPI_CHAR, img_local_data, sizeof(img_result->imageData), MPI_CHAR, 0, MPI_COMM_WORLD); 
+    int workload = img_result->height / number_of_processes;
+
+    if(rank == 0){
+
+        printf("Calculating from 0 to %d\n", workload);
+        applySmooth(img, img_result, 0, workload);
+        // Only the process 0 should save the image
+       
+        printf("here from boss\n");
+        MPI_Gather(img_result->imageData, imageSize/number_of_processes, MPI_CHAR, result, imageSize/number_of_processes, MPI_CHAR, 0, MPI_COMM_WORLD);
+
+        img_result->imageData = result;
+        cvSaveImage("result/result.jpg", img_result, 0);
+        cvReleaseImage(&img);
+   }
+    else {
+       
+        int start = rank*workload;
+        printf("Calculating from %d to %d\n", start, start+workload);
+        applySmooth(img, img_result, start, start+workload);
+
+        printf("here\n");
+        MPI_Gather(img_result->imageData + workload*img->width*img->nChannels, imageSize/number_of_processes, MPI_CHAR, NULL , imageSize/number_of_processes, MPI_CHAR, 0, MPI_COMM_WORLD); 
+    }
+
+    //applySmooth(img, img_result); 
+
+    MPI_Finalize();
     // release the image
-    cvReleaseImage(&img);
     return 0;
 }
 
-void applySmooth(IplImage* img, IplImage* img_result){
+void applySmooth(IplImage* img, IplImage* img_result, int start, int end){
     uchar *data   = NULL;
     uchar *data_result = NULL;
 
@@ -65,14 +108,13 @@ void applySmooth(IplImage* img, IplImage* img_result){
     int newGreenValue = 0;
     int newBlueValue = 0;
 
-    printf("height: %d width: %d\n", height, width);
     // Pixels from the border do have less pixels aronund than the others, we
     // have consider this value while calculating the newValue
     int value = 0;
     int i, j, k, l;
 
     //  For each pixel in the image
-    for(i=0;i<height;i++){
+    for(i=start;i<end;i++){
         for(j=0;j<width;j++){
             // New image values
             data_result[i*step+j*channels+RED]= calculatePixel(data, i, j, height, width, step, channels, RED);
@@ -97,9 +139,6 @@ int calculatePixel(uchar* data, int i, int j, int height, int width, int step, i
 
                 // Adds all the pixel values of the 5x5 matrix
                 newValue = newValue + data[k*step+l*channels+color];
-                //newRedValue = newRedValue + data[k*step+l*channels+RED];
-                //newGreenValue = newGreenValue + data[k*step+l*channels+GREEN];
-                //newBlueValue = newBlueValue + data[k*step+l*channels+BLUE];
                 value++;
             }                           
         }
