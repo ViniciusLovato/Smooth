@@ -50,40 +50,50 @@ int main(int argc, char *argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &number_of_processes);
 
 
+    // Image size
     int imageSize = img_result->height*img_result->width*img_result->nChannels;
+
+
+    // Array that contains the final imageData
     char *result = (char*)malloc(sizeof(char)*imageSize);
 
 
-   // MPI_Scatter(img_result->imageData, sizeof(img_result->imageData), MPI_CHAR, img_local_data, sizeof(img_result->imageData), MPI_CHAR, 0, MPI_COMM_WORLD); 
+    // Calculates the amount of work of each process
     int workload = img_result->height / number_of_processes;
 
     if(rank == 0){
 
         printf("Calculating from 0 to %d\n", workload);
+
+        // The first process always calculates the first part of the matrix
         applySmooth(img, img_result, 0, workload);
-        // Only the process 0 should save the image
-       
-        printf("here from boss\n");
+      
+        // Collect all the processed data
         MPI_Gather(img_result->imageData, imageSize/number_of_processes, MPI_CHAR, result, imageSize/number_of_processes, MPI_CHAR, 0, MPI_COMM_WORLD);
 
+
+        // add the new imageData array to plot the image
         img_result->imageData = result;
         cvSaveImage("result/result.jpg", img_result, 0);
         cvReleaseImage(&img);
    }
     else {
-       
+      
+        // Each process knows where to start
         int start = rank*workload;
         printf("Calculating from %d to %d\n", start, start+workload);
+        
+
         applySmooth(img, img_result, start, start+workload);
 
-        printf("here\n");
-        MPI_Gather(img_result->imageData + workload*img->width*img->nChannels, imageSize/number_of_processes, MPI_CHAR, NULL , imageSize/number_of_processes, MPI_CHAR, 0, MPI_COMM_WORLD); 
+        // The offset is important to avoid any problems while building the
+        // image
+        MPI_Gather(img_result->imageData + rank* (imageSize/number_of_processes), imageSize/number_of_processes, MPI_CHAR, NULL , imageSize/number_of_processes, MPI_CHAR, 0, MPI_COMM_WORLD); 
     }
 
-    //applySmooth(img, img_result); 
 
     MPI_Finalize();
-    // release the image
+
     return 0;
 }
 
@@ -113,6 +123,7 @@ void applySmooth(IplImage* img, IplImage* img_result, int start, int end){
     int value = 0;
     int i, j, k, l;
 
+    #pragma omp parallel for private(i, j)
     //  For each pixel in the image
     for(i=start;i<end;i++){
         for(j=0;j<width;j++){
