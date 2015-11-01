@@ -51,29 +51,39 @@ int main(int argc, char *argv[])
 
 
     // Image size
-    int imageSize = img_result->height*img_result->width*img_result->nChannels;
+    int imageSize = img_result->height*img_result->widthStep;
+    printf("Image size: %d\n", imageSize);
 
-
-    // Array that contains the final imageData
-    char *result = (char*)malloc(sizeof(char)*imageSize);
+    
 
 
     // Calculates the amount of work of each process
     int workload = img_result->height / number_of_processes;
 
+    int rec_size = workload * img_result->widthStep;
+
     if(rank == 0){
 
+        // Array that contains the final imageData
         printf("Calculating from 0 to %d\n", workload);
+        char *result = (char*)malloc(sizeof(char)*imageSize);
+        int total_work = workload * number_of_processes;
 
         // The first process always calculates the first part of the matrix
         applySmooth(img, img_result, 0, workload);
       
         // Collect all the processed data
-        MPI_Gather(img_result->imageData, imageSize/number_of_processes, MPI_CHAR, result, imageSize/number_of_processes, MPI_CHAR, 0, MPI_COMM_WORLD);
+        MPI_Gather(img_result->imageData, rec_size, MPI_CHAR, result, rec_size, MPI_CHAR, 0, MPI_COMM_WORLD);
 
 
         // add the new imageData array to plot the image
         img_result->imageData = result;
+
+        if (total_work < img_result->height)
+        {
+            applySmooth(img, img_result, total_work, img_result->height);
+            printf ("Root calculated %d extra rows, from %d to %d\n", img_result->height - total_work, total_work, img_result->height);
+        }
         cvSaveImage("result/result.jpg", img_result, 0);
         cvReleaseImage(&img);
    }
@@ -82,13 +92,15 @@ int main(int argc, char *argv[])
         // Each process knows where to start
         int start = rank*workload;
         printf("Calculating from %d to %d\n", start, start+workload);
-        
+        printf ("Passing %d bytes %d %d\n", imageSize/number_of_processes, rec_size, workload * img_result->widthStep);
 
         applySmooth(img, img_result, start, start+workload);
 
         // The offset is important to avoid any problems while building the
         // image
-        MPI_Gather(img_result->imageData + rank* (imageSize/number_of_processes), imageSize/number_of_processes, MPI_CHAR, NULL , imageSize/number_of_processes, MPI_CHAR, 0, MPI_COMM_WORLD); 
+
+
+        MPI_Gather(img_result->imageData + rec_size * rank, rec_size, MPI_CHAR, NULL , rec_size, MPI_CHAR, 0, MPI_COMM_WORLD); 
     }
 
 

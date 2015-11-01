@@ -3,12 +3,13 @@ MPICC =mpicc
 OPENCV_FLAGS=`pkg-config --cflags opencv`
 OPENCV_LIBS=`pkg-config --libs opencv`
 OPENMP=-fopenmp -lm
+OPT=-o2 -g
 BIN=bin
 SRC=src
 
 all:
-	$(CC) $(OPENCV_FLAGS) -o $(BIN)/smooth $(SRC)/smooth.c $(OPENCV_LIBS)
-	$(MPICC) $(OPENCV_FLAGS) -o $(BIN)/parallelSmooth $(SRC)/parallelSmooth.c $(OPENCV_LIBS) $(OPENMP)
+	$(CC) $(OPENCV_FLAGS) $(OPT) -o $(BIN)/smooth $(SRC)/smooth.c $(OPENCV_LIBS)
+	$(MPICC) $(OPENCV_FLAGS) $(OPT) -o $(BIN)/parallelSmooth $(SRC)/parallelSmooth.c $(OPENCV_LIBS) $(OPENMP)
 
 parallel:
 	$(MPICC) $(OPENCV_FLAGS) -o $(BIN)/paralleSmooth $(SRC)/parallelSmooth.c $(OPENCV_LIBS) $(OPENMP)
