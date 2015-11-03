@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <time.h>
 #include <omp.h>
 #include <stdio.h>
 #include <math.h>
@@ -8,6 +9,8 @@
 #define BLUE 0
 #define GREEN 1
 #define RED 2
+
+#define N 10
 
 void applySmooth(IplImage*, IplImage*);
 int calculatePixel(uchar*, int, int , int , int , int , int , int );
@@ -36,7 +39,25 @@ int main(int argc, char *argv[])
 
     img_result = cvCloneImage(img);
 
-    applySmooth(img, img_result); 
+
+    struct timespec start, finish;
+    double time_spent;
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
+    int i;
+    for(i = 0; i < N; i++){
+        printf("Executing %d\n", i);
+        applySmooth(img, img_result); 
+    }
+    
+    clock_gettime(CLOCK_MONOTONIC, &finish);
+
+
+    time_spent = (finish.tv_sec - start.tv_sec);
+    time_spent += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+
+    printf("Time Spent: %lf\n", time_spent);
 
     cvSaveImage("result/result.jpg", img_result, 0);
     // release the image
