@@ -15,6 +15,8 @@
 void applySmooth(IplImage*, IplImage*);
 int calculatePixel(uchar*, int, int , int , int , int , int , int );
 
+double average = 0;
+
 int main(int argc, char *argv[])
 {
     // original image
@@ -36,30 +38,29 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
-
     img_result = cvCloneImage(img);
-
-
-    struct timespec start, finish;
-    double time_spent;
-
-    clock_gettime(CLOCK_MONOTONIC, &start);
 
     int i;
     for(i = 0; i < N; i++){
-        printf("Executing %d\n", i);
+        struct timespec start, finish;
+        double time_spent;
+
+        clock_gettime(CLOCK_MONOTONIC, &start);
+
+        //printf("Executing %d\n", i);
         applySmooth(img, img_result); 
+
+        clock_gettime(CLOCK_MONOTONIC, &finish);
+
+        time_spent = (finish.tv_sec - start.tv_sec);
+        time_spent += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+
+        printf("Execution %d - Time Spent: %lf\n",i, time_spent);
+        
+        average = average + time_spent;
     }
-    
-    clock_gettime(CLOCK_MONOTONIC, &finish);
-
-
-    time_spent = (finish.tv_sec - start.tv_sec);
-    time_spent += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
-
-    printf("Time Spent: %lf\n", time_spent);
-
     cvSaveImage("result/result.jpg", img_result, 0);
+    printf("Average time spent: %lf\n", average/N);
     // release the image
     cvReleaseImage(&img);
     return 0;
@@ -86,7 +87,7 @@ void applySmooth(IplImage* img, IplImage* img_result){
     int newGreenValue = 0;
     int newBlueValue = 0;
 
-    printf("height: %d width: %d\n", height, width);
+    //printf("height: %d width: %d\n", height, width);
     // Pixels from the border do have less pixels aronund than the others, we
     // have consider this value while calculating the newValue
     int value = 0;

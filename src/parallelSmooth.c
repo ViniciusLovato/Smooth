@@ -11,7 +11,9 @@
 #define GREEN 1
 #define RED 2
 
-#define REPEAT for(i = 0; i < 10; i++)
+#define N 10
+
+double average = 0;
 
 void applySmooth(IplImage*, uchar*, int start, int end);
 
@@ -47,10 +49,9 @@ int main(int argc, char *argv[])
 
     // Image size
     int imageSize = img->height*img->widthStep;
-    printf("Image size: %d\n", imageSize);
+    //printf("Image size: %d\n", imageSize);
     fflush(stdout);
     
-
 
     // Calculates the amount of work of each process
     int workload = img->height / number_of_processes;
@@ -58,67 +59,76 @@ int main(int argc, char *argv[])
     int rec_size = workload * img->widthStep;
 
     int i;
-    if(rank == 0){
 
-        struct timespec start, finish;
-        double time_spent;
+    for(i = 0; i < N; i++){
+        if(rank == 0){
 
-        clock_gettime(CLOCK_MONOTONIC, &start);
+            struct timespec start, finish;
+            double time_spent;
 
-        // Array that contains the final imageData
-        printf("Calculating from 0 to %d\n", workload);
-        char *result = malloc(rec_size);
-        char *extra = 0;
-        int total_work = workload * number_of_processes;
+            clock_gettime(CLOCK_MONOTONIC, &start);
 
-        // The first process always calculates the first part of the matrix
-        REPEAT
-        applySmooth(img, result, 0, workload);
+            // Array that contains the final imageData
+            //printf("Calculating from 0 to %d\n", workload);
+            char *result = malloc(rec_size);
+            char *extra = 0;
+            int total_work = workload * number_of_processes;
 
-        if (total_work < img->height)
-        {
-            extra = malloc((img->height - total_work) * img->widthStep);
+            // The first process always calculates the first part of the matrix
+            applySmooth(img, result, 0, workload);
 
-            REPEAT
-            applySmooth(img, extra, total_work, img->height);
+            if (total_work < img->height)
+            {
+                extra = malloc((img->height - total_work) * img->widthStep);
 
-            printf ("Root calculated %d extra rows, from %d to %d\n", img->height - total_work, total_work, img->height);
-            memcpy(img->imageData + rec_size * number_of_processes, extra, (img->height - total_work) * img->widthStep);
+                applySmooth(img, extra, total_work, img->height);
+
+                //printf ("Root calculated %d extra rows, from %d to %d\n", img->height - total_work, total_work, img->height);
+                memcpy(img->imageData + rec_size * number_of_processes, extra, (img->height - total_work) * img->widthStep);
+            }
+
+            // Collect all the processed data
+            MPI_Gather(result, rec_size, MPI_CHAR, img->imageData, rec_size, MPI_CHAR, 0, MPI_COMM_WORLD);
+
+            clock_gettime(CLOCK_MONOTONIC, &finish);
+
+            time_spent = (finish.tv_sec - start.tv_sec);
+            time_spent += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+
+            printf("Execution# %d - Time spent %lf\n", i, time_spent);
+
+            average = average + time_spent;
+
+            // cvSaveImage("result/result.jpg", img, 0);
+            // cvReleaseImage(&img);
+            free(result);
+            free(extra);
         }
+        else {
 
-        // Collect all the processed data
-        MPI_Gather(result, rec_size, MPI_CHAR, img->imageData, rec_size, MPI_CHAR, 0, MPI_COMM_WORLD);
-        
-        clock_gettime(CLOCK_MONOTONIC, &finish);
+            // Each process knows where to start
+            int start = rank*workload;
+            char *  result = malloc(rec_size);
+            //printf("Calculating from %d to %d\n", start, start+workload);
+            //printf ("Passing %d bytes %d %d\n", imageSize/number_of_processes, rec_size, workload * img->widthStep);
 
-        time_spent = (finish.tv_sec - start.tv_sec);
-        time_spent += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+            applySmooth(img, result, start, start+workload);
 
-        printf("Time spent %lf\n", time_spent);
-
-        cvSaveImage("result/result.jpg", img, 0);
-        cvReleaseImage(&img);
-   }
-    else {
-      
-        // Each process knows where to start
-        int start = rank*workload;
-        char *  result = malloc(rec_size);
-        printf("Calculating from %d to %d\n", start, start+workload);
-        printf ("Passing %d bytes %d %d\n", imageSize/number_of_processes, rec_size, workload * img->widthStep);
-
-        REPEAT
-        applySmooth(img, result, start, start+workload);
-
-        // The offset is important to avoid any problems while building the
-        // image
-
-        MPI_Gather(result, rec_size, MPI_CHAR, NULL , rec_size, MPI_CHAR, 0, MPI_COMM_WORLD); 
+            // The offset is important to avoid any problems while building the
+            // image
+            MPI_Gather(result, rec_size, MPI_CHAR, NULL , rec_size, MPI_CHAR, 0, MPI_COMM_WORLD); 
+            free(result);
+        }
+    
     }
 
+    if(rank == 0)
+    {
 
+        average = average/N;
+        printf("Average %lf\n", average);
+    }
     MPI_Finalize();
-
     return 0;
 }
 
@@ -151,7 +161,7 @@ void applySmooth(IplImage* img, uchar* img_result, int start, int end){
     int load = end - start;
 
 
-    #pragma omp parallel for private(i, j, k, l, value, sum)
+#pragma omp parallel for private(i, j, k, l, value, sum)
     //  For each pixel in the image
     for(i=0;i<load;i++){
         for(j=0;j<width;j++){
