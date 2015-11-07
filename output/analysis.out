@@ -1,9 +1,9 @@
-('invalid filename: analysis.out, skipping...', <open file '<stderr>', mode 'w' at 0x7f1d46bb31e0>)
+('invalid filename: analysis.out, skipping...', <open file '<stderr>', mode 'w' at 0x7fb5648041e0>)
 Name: rgb4
 seq: 1.882 +- 0.0107703296143
 par: 3.52 +- 0.0934879671402
 Name: rgb3
-seq: 2.0845 +- 0.00973396116697
+seq: 2.085 +- 0.0120415945788
 par: 3.472 +- 0.0921737489744
 Name: rgb2
 seq: 2.288 +- 0.006
