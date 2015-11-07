@@ -1,0 +1,25 @@
+('invalid filename: analysis.out, skipping...', <open file '<stderr>', mode 'w' at 0x7f1d46bb31e0>)
+Name: rgb4
+seq: 1.882 +- 0.0107703296143
+par: 3.52 +- 0.0934879671402
+Name: rgb3
+seq: 2.0845 +- 0.00973396116697
+par: 3.472 +- 0.0921737489744
+Name: rgb2
+seq: 2.288 +- 0.006
+par: 3.528 +- 0.107777548682
+Name: rgb1
+seq: 1.882 +- 0.004
+par: 3.58 +- 0.111803398875
+Name: grayscale4
+seq: 6.669 +- 0.0157797338381
+par: 3.898 +- 0.115221525767
+Name: grayscale1
+seq: 7.412 +- 0.00979795897113
+par: 4.075 +- 0.269712810226
+Name: grayscale3
+seq: 13.293 +- 1.28570642061
+par: 5.018 +- 0.427195505594
+Name: grayscale2
+seq: 8.344 +- 1.16369411788
+par: 4.03 +- 0.132060592154
