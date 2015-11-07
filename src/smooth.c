@@ -64,8 +64,7 @@ void applySmooth(IplImage* img, IplImage* img_result){
     int newRedValue = 0;
     int newGreenValue = 0;
     int newBlueValue = 0;
-
-    printf("height: %d width: %d\n", height, width);
+    
     // Pixels from the border do have less pixels aronund than the others, we
     // have consider this value while calculating the newValue
     int value = 0;

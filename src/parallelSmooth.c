@@ -46,9 +46,6 @@ int main(int argc, char *argv[])
 
     // Image size
     int imageSize = img->height*img->widthStep;
-    printf("Image size: %d\n", imageSize);
-    fflush(stdout);
-    
 
 
     // Calculates the amount of work of each process
@@ -59,7 +56,6 @@ int main(int argc, char *argv[])
     if(rank == 0){
 
         // Array that contains the final imageData
-        printf("Calculating from 0 to %d\n", workload);
         char *result = malloc(rec_size);
         char *extra = 0;
         int total_work = workload * number_of_processes;
@@ -71,7 +67,6 @@ int main(int argc, char *argv[])
         {
             extra = malloc((img->height - total_work) * img->widthStep);
             applySmooth(img, extra, total_work, img->height);
-            printf ("Root calculated %d extra rows, from %d to %d\n", img->height - total_work, total_work, img->height);
             memcpy(img->imageData + rec_size * number_of_processes, extra, (img->height - total_work) * img->widthStep);
         }
 
@@ -86,8 +81,6 @@ int main(int argc, char *argv[])
         // Each process knows where to start
         int start = rank*workload;
         char *  result = malloc(rec_size);
-        printf("Calculating from %d to %d\n", start, start+workload);
-        printf ("Passing %d bytes %d %d\n", imageSize/number_of_processes, rec_size, workload * img->widthStep);
 
 
 
