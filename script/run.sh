@@ -8,12 +8,12 @@ mkdir -p output
 for i in `seq 1 10`
 	do
 	    echo Executing sequential ${1}.jpg iteration ${i} of 10
-	    (/usr/bin/time -f%e ../bin/smooth ../img/${1}.jpg) 2>> output/seq_${1}.out
+	    (/usr/bin/time -f%e bin/smooth img/${1}.jpg) 2>> output/seq_${1}.out
 	done
 
 for j in `seq 1 10`
 	do
         echo Executing parallel ${1}.jpg iteration ${j} of 10
-        (/usr/bin/time -f%e mpirun -n 2 ../bin/parallelSmooth ../img/${1}.jpg) 2>> output/par_${1}.out
+        (/usr/bin/time -f%e mpirun -n 2 bin/parallelSmooth img/${1}.jpg) 2>> output/par_${1}.out
     done
     
