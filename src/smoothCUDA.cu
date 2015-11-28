@@ -12,14 +12,36 @@
 void applySmooth(IplImage*, IplImage*);
 int calculatePixel(uchar*, int, int , int , int , int , int , int );
 
+__global__ void gpuSmooth(uchar * target, uchar * data, int width, int height, int step, int channels)
+{
+    int i = blockDim.x;
+    int j = threadIdx.x;
+    int value[3];
+    int total;
+    int k, l;
+
+    total = value[0] = value[1] = value[2] = 0;
+
+    for(k = i-2; k < i + 3; k++)
+        for(l = j-2; l < j+3; l++)
+            if((k > 0) && (k < height) && (l > 0) && (l < width))
+            {
+                value[0] += data[k * step + l * channels];
+                value[1] += data[k * step + l * channels + 1];
+                value[2] += data[k * step + l * channels + 2];
+                ++total;
+            }
+
+    target[i * step + j * channels] = value[0] / total; 
+    target[i * step + j * channels + 1] = value[1] / total;
+    target[i * step + j * channels + 2] = value[2] / total;
+
+}
+
 int main(int argc, char *argv[])
 {
     // original image
     IplImage* img = 0;
-
-    // result image
-    IplImage* img_result = 0;
-
 
     if(argc<2){
         printf("Usage: main <image-file-name>\n\7");
@@ -33,14 +55,23 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
+    int image_size = img->height*img->widthStep;
 
-    img_result = cvCloneImage(img);
+    uchar * gpu_data, *gpu_target;
+    cudaMalloc(&gpu_data, image_size);
+    cudaMalloc(&gpu_target, image_size);
 
-    applySmooth(img, img_result); 
+    cudaMemcpy(gpu_data, img->imageData, image_size, cudaMemcpyHostToDevice);
 
-    cvSaveImage("result/result.jpg", img_result, 0);
+    gpuSmooth<<<img->height, img->width>>>(gpu_target, gpu_data, img->width, img->height, img->widthStep, img->nChannels);
+
+    cudaMemcpy(img->imageData, gpu_target, image_size, cudaMemcpyDeviceToHost);
+
+    cvSaveImage("result/result.jpg", img, 0);
     // release the image
     cvReleaseImage(&img);
+    cudaFree(gpu_data);
+    cudaFree(gpu_target);
     return 0;
 }
 
