@@ -14,11 +14,12 @@ int calculatePixel(uchar*, int, int , int , int , int , int , int );
 
 __global__ void gpuSmooth(uchar * target, uchar * data, int width, int height, int step, int channels)
 {
-    int i = blockDim.x;
+    int i = blockIdx.x;
     int j = threadIdx.x;
     int value[3];
     int total;
     int k, l;
+
 
     total = value[0] = value[1] = value[2] = 0;
 
