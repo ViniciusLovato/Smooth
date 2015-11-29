@@ -43,7 +43,7 @@ __global__ void gpuSmooth(uchar * target, uchar * data, int width, int height, i
     __shared__ uchar mem[5][260][3];
     int total;
     int k, l, m;
-    
+
     // Spill treatment
     if((i > 0) && (i < height) && (j > 0) && (j < width))
     {
@@ -112,7 +112,6 @@ int main(int argc, char *argv[])
     int image_size = img->height*img->widthStep;
 
     uchar * gpu_data, *gpu_target;
-    gpuErrchk(cudaSetDevice(1));
     gpuErrchk(cudaMalloc(&gpu_data, image_size));
     gpuErrchk(cudaMalloc(&gpu_target, image_size));
 
@@ -121,7 +120,6 @@ int main(int argc, char *argv[])
     dim3 grid(img->height, (img->width / 256) + (img->width % 256 != 0), 1);
 
     gpuSmooth<<<grid, 256>>>(gpu_target, gpu_data, img->width, img->height, img->widthStep, img->nChannels);
-    cudaDeviceSynchronize();
     gpuErrchk(cudaMemcpy(img->imageData, gpu_target, image_size, cudaMemcpyDeviceToHost));
 
     cvSaveImage("result/result.jpg", img, 0);
