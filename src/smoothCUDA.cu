@@ -14,12 +14,16 @@ int calculatePixel(uchar*, int, int , int , int , int , int , int );
 
 __global__ void gpuSmooth(uchar * target, uchar * data, int width, int height, int step, int channels)
 {
-    int i = blockIdx.x;
-    int j = threadIdx.x;
+    int i; i = blockIdx.x;
+    int j; j = threadIdx.x + blockIdx.y * blockDim.x;
     int value[3];
     int total;
     int k, l;
 
+    //printf ("%d %d %d %d %d %d %d\n", threadIdx.x, blockIdx.x, blockIdx.y, blockDim.x, blockDim.y, i, j);
+
+    if((i < 0) || (i > height) || (j < 0) || (j > width))
+        return;
 
     total = value[0] = value[1] = value[2] = 0;
 
@@ -59,12 +63,16 @@ int main(int argc, char *argv[])
     int image_size = img->height*img->widthStep;
 
     uchar * gpu_data, *gpu_target;
+    printf ("%d %d %d %d %d\n", img->height, img->width, img->widthStep, image_size, (img->width / 256) + (img->width % 256 != 0));
+    cudaSetDevice(1);
     cudaMalloc(&gpu_data, image_size);
     cudaMalloc(&gpu_target, image_size);
 
     cudaMemcpy(gpu_data, img->imageData, image_size, cudaMemcpyHostToDevice);
 
-    gpuSmooth<<<img->height, img->width>>>(gpu_target, gpu_data, img->width, img->height, img->widthStep, img->nChannels);
+    dim3 grid(img->height, (img->width / 256) + (img->width % 256 != 0), 1);
+
+    gpuSmooth<<<grid, 256>>>(gpu_target, gpu_data, img->width, img->height, img->widthStep, img->nChannels);
 
     cudaMemcpy(img->imageData, gpu_target, image_size, cudaMemcpyDeviceToHost);
 
