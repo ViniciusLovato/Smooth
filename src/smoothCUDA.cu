@@ -9,9 +9,6 @@
 #define GREEN 1
 #define RED 2
 
-void applySmooth(IplImage*, IplImage*);
-int calculatePixel(uchar*, int, int , int , int , int , int , int );
-
 __global__ void gpuSmooth(uchar * target, uchar * data, int width, int height, int step, int channels)
 {
     int i; i = blockIdx.x;
@@ -19,8 +16,6 @@ __global__ void gpuSmooth(uchar * target, uchar * data, int width, int height, i
     int value[3];
     int total;
     int k, l;
-
-    //printf ("%d %d %d %d %d %d %d\n", threadIdx.x, blockIdx.x, blockIdx.y, blockDim.x, blockDim.y, i, j);
 
     if((i < 0) || (i > height) || (j < 0) || (j > width))
         return;
@@ -63,8 +58,7 @@ int main(int argc, char *argv[])
     int image_size = img->height*img->widthStep;
 
     uchar * gpu_data, *gpu_target;
-    printf ("%d %d %d %d %d\n", img->height, img->width, img->widthStep, image_size, (img->width / 256) + (img->width % 256 != 0));
-    cudaSetDevice(1);
+
     cudaMalloc(&gpu_data, image_size);
     cudaMalloc(&gpu_target, image_size);
 
@@ -82,61 +76,4 @@ int main(int argc, char *argv[])
     cudaFree(gpu_data);
     cudaFree(gpu_target);
     return 0;
-}
-
-void applySmooth(IplImage* img, IplImage* img_result){
-    uchar *data   = NULL;
-    uchar *data_result = NULL;
-
-    data = (uchar *)img->imageData;
-
-    // get the data from the copied image
-    // we have to work with this one because we dont want to mess up the
-    // original file
-    data_result = (uchar *)img_result->imageData;
-
-    // get the image data
-    int height    = img->height;
-    int width     = img->width;
-    int step      = img->widthStep;
-    int channels  = img->nChannels;
-    
-    // Pixels from the border do have less pixels aronund than the others, we
-    // have consider this value while calculating the newValue
-    int i, j;
-
-    //  For each pixel in the image
-    for(i=0;i<height;i++){
-        for(j=0;j<width;j++){
-            // New image values
-            data_result[i*step+j*channels+RED]= calculatePixel(data, i, j, height, width, step, channels, RED);
-            data_result[i*step+j*channels+GREEN]= calculatePixel(data, i, j, height, width, step, channels, GREEN);
-            data_result[i*step+j*channels+BLUE]= calculatePixel(data, i, j, height, width, step, channels, BLUE);
-
-        }
-    } 
-}
-
-int calculatePixel(uchar* data, int i, int j, int height, int width, int step, int channels, int color){
-
-    int value = 0;
-    int newValue = 0;
-    int k,l;
-    // For each pixel in the matrix 5x5 around the current pixel
-    for(k = i-2; k < i + 3; k++){
-        for(l = j-2; l < j+3; l++){
-
-            // Check if the pixel exists (it may be outside the grid)
-            if((k > 0) && (k < height) && (l > 0) && (l < width)){
-
-                // Adds all the pixel values of the 5x5 matrix
-                newValue = newValue + data[k*step+l*channels+color];
-                //newRedValue = newRedValue + data[k*step+l*channels+RED];
-                //newGreenValue = newGreenValue + data[k*step+l*channels+GREEN];
-                //newBlueValue = newBlueValue + data[k*step+l*channels+BLUE];
-                value++;
-            }                           
-        }
-    }
-    return newValue/value;
 }
