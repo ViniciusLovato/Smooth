@@ -6,15 +6,15 @@ import pprint
 import re
 import sys
 import math
-import collections
+
 
 
 def main():
     # Generate regex for file names
-    p = re.compile('(?P<type>(par|seq))_(?P<name>[A-Za-z0-9]*)\.out')
+    p = re.compile('(?P<type>(par|seq))_(?P<name>[A-Za-Z_\-0-9]*)\.out')
 
-    avg = collections.defaultdict(dict)
-    error = collections.defaultdict(dict)
+    data = defaultdict(dict)
+    error = defaultdict(dict)
     
 
     for f in os.listdir('output'):
@@ -24,6 +24,8 @@ def main():
             print('invalid filename: ' + f + ', skipping...', sys.stderr)
             continue
         
+        thread = 1 if (m.group('type') == 'seq') else int(m.group('threads'))
+
         name = m.group('name')
 
         f_ = os.path.join('output', f)
@@ -37,25 +39,22 @@ def main():
                 for num in float_line:
                     floats.append(float(num))
 
+            print ('Name: ' + name + ' Type: ' + m.group('type'))
 
             total = 0
             for num in floats:
+                print(str(num))
                 sum_ += num
                 total += 1
+            print('sum: ' + str(sum_))
             sum_ /= total
-            avg[m.group('type')][name] = sum_
+            print('avg: ' + str(sum_))
 
             for num in floats:
                 sum_error += (num - sum_) * (num - sum_)
             sum_error /= total
             sum_error = math.sqrt(sum_error)
-            error[m.group('type')][name] = sum_error
-
-    for key in avg['seq']:
-    	print('Name: ' + key)
-    	print('seq: ' + str(avg['seq'][key]) + ' +- ' + str(error['seq'][key]))
-    	print('par: ' + str(avg['par'][key]) + ' +- ' + str(error['par'][key]))
-
+            print('error: ' + str(sum_error))
     return
 
       
