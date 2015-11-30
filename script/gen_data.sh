@@ -9,7 +9,7 @@ rm -rf output
 sh script/run.sh rgb1
 sh script/run.sh rgb2
 sh script/run.sh rgb3
-sh script/run.sh rgb3
+sh script/run.sh rgb4
 sh script/run.sh gray1
 sh script/run.sh gray2
 sh script/run.sh gray3
