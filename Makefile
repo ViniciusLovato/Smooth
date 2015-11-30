@@ -12,13 +12,13 @@ SRC=src
 all: sequential parallel cuda
 	
 parallel:
-	$(MPICC) $(OPENCV_FLAGS) $(OPT) -o $(BIN)/parallelSmooth $(SRC)/parallelSmooth.c $(OPENCV_LIBS) $(OPENMP)
+	$(MPICC) $(OPENCV_FLAGS) $(OPT) -o $(BIN)/parallelSmooth $(SRC)/parallelSmooth.c $(O_LIBS) $(OPENMP)
 
 sequential:
-	$(CC) $(OPENCV_FLAGS) $(OPT) -o $(BIN)/smooth $(SRC)/smooth.c $(OPENCV_LIBS)
+	$(CC) $(OPENCV_FLAGS) $(OPT) -o $(BIN)/smooth $(SRC)/smooth.c $(O_LIBS)
 
 cuda:
-	$(NVCC) $(OPENCV_FLAGS) -o $(BIN)/smoothCUDA $(SRC)/smoothCUDA.cu $(OPENCV_LIBS)
+	$(NVCC) $(OPENCV_FLAGS) -o $(BIN)/smoothCUDA $(SRC)/smoothCUDA.cu $(O_LIBS)
 
 clean:
 	rm -rf $(BIN)/smooth
